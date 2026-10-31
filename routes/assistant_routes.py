@@ -229,7 +229,7 @@ def setup_assistant_routes(task_scheduler) -> APIRouter:
                         task.prompt = ci.prompt
                     if ci.enabled is not None:
                         task.status = "active" if ci.enabled else "paused"
-                    if time_changed or ci.enabled is True:
+                    if (time_changed or ci.enabled is True) and (task.trigger_type or "schedule") == "schedule":
                         task.next_run = compute_next_run(
                             task.schedule or "daily",
                             task.scheduled_time,
@@ -251,7 +251,7 @@ def setup_assistant_routes(task_scheduler) -> APIRouter:
                     ScheduledTask.crew_member_id == crew_db.id,
                 ).all()
                 for t in tasks:
-                    if t.schedule and t.scheduled_time:
+                    if t.schedule and t.scheduled_time and (t.trigger_type or "schedule") == "schedule":
                         t.next_run = compute_next_run(
                             t.schedule, t.scheduled_time, t.scheduled_day, t.scheduled_date,
                             after=now_utc, cron_expression=t.cron_expression, tz_name=tz_name,

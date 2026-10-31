@@ -767,11 +767,14 @@ def setup_task_routes(task_scheduler) -> APIRouter:
                     )
                 except ValueError as exc:
                     raise HTTPException(400, str(exc)) from exc
+            previous_trigger = task.trigger_type or "schedule"
             if req.trigger_type is not None:
                 # Generate webhook token when switching to webhook trigger
                 if req.trigger_type == "webhook" and not task.webhook_token:
                     task.webhook_token = secrets.token_urlsafe(32)
                 task.trigger_type = req.trigger_type
+            next_trigger = task.trigger_type or "schedule"
+            trigger_changed = next_trigger != previous_trigger
             if req.trigger_event is not None:
                 task.trigger_event = req.trigger_event
             if req.trigger_count is not None:
@@ -812,7 +815,17 @@ def setup_task_routes(task_scheduler) -> APIRouter:
             if req.cron_expression is not None:
                 schedule_changed = True
 
-            if schedule_changed and task.status == "active" and (task.trigger_type or "schedule") == "schedule":
+            if trigger_changed and next_trigger != "schedule":
+                # The scheduler dispatches any active row whose next_run is due,
+                # so a leftover timer would fire a webhook/event task at its old
+                # scheduled time. Event tasks only get a next_run again when the
+                # scheduler defers a triggered run.
+                task.next_run = None
+            elif trigger_changed and task.schedule:
+                # Switching back to a schedule restarts its timer.
+                schedule_changed = True
+
+            if schedule_changed and task.status == "active" and next_trigger == "schedule":
                 task.next_run = compute_next_run(
                     task.schedule, task.scheduled_time,
                     task.scheduled_day, task.scheduled_date,

@@ -595,9 +595,12 @@ async def do_manage_tasks(content: str, owner: Optional[str] = None) -> Dict:
                 from src.agent_runtime.authority import seal_task_authority
                 task.request_authority_json = seal_task_authority(
                     task.prompt, task.task_type, task.action, owner=owner)
+            previous_trigger = task.trigger_type or "schedule"
             if args.get("trigger_type") is not None:
                 task.trigger_type = args["trigger_type"]
                 changed.append("trigger_type")
+            next_trigger = task.trigger_type or "schedule"
+            trigger_changed = next_trigger != previous_trigger
             if args.get("trigger_event") is not None:
                 task.trigger_event = args["trigger_event"]
                 changed.append("trigger_event")
@@ -618,7 +621,14 @@ async def do_manage_tasks(content: str, owner: Optional[str] = None) -> Dict:
                 changed.append("scheduled_date")
                 schedule_changed = True
 
-            if schedule_changed and (task.trigger_type or "schedule") == "schedule":
+            if trigger_changed and next_trigger != "schedule":
+                # A leftover timer would fire the task without its webhook/event.
+                task.next_run = None
+            elif trigger_changed and task.schedule:
+                # Switching back to a schedule restarts its timer.
+                schedule_changed = True
+
+            if schedule_changed and next_trigger == "schedule":
                 if task.schedule == "once" and task.scheduled_date is None:
                     raise ValueError("scheduled_date is required for a one-off task")
                 task.next_run = compute_next_run(

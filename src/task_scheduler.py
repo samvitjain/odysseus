@@ -2671,6 +2671,8 @@ class TaskScheduler:
                     or task.scheduled_date is not None
                     or task.cron_expression is not None
                 ):
+                    if (task.trigger_type or "schedule") == "schedule":
+                        task.next_run = None
                     task.trigger_type = "event"
                     task.trigger_event = defs.get("trigger_event")
                     task.trigger_count = defs.get("trigger_count") or 1

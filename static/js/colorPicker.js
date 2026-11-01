@@ -406,6 +406,21 @@ function position(p, anchor) {
 }
 
 let _onEsc = null;
+let _stackWatch = null;
+
+// position() reads the tool-window stack once, but the fallback eyedropper
+// keeps the picker open across clicks that raise the window under them. Follow
+// the live stack until the picker closes so sampling can't bury it. Hardening
+// only, refs #6507: nothing here changes the z-index the picker opens with.
+function _watchToolWindowStack() {
+  _stackWatch = new MutationObserver((records) => {
+    if (!_popover) return;
+    if (!records.some(r => r.target === document.body || r.target.parentNode === document.body)) return;
+    const z = String(topPortalZ());
+    if (_popover.style.zIndex !== z) _popover.style.zIndex = z;
+  });
+  _stackWatch.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+}
 
 function _detachOutsideHandlers() {
   if (_onOutside) {
@@ -422,6 +437,10 @@ function _detachOutsideHandlers() {
 
 function _destroyPopover() {
   _detachOutsideHandlers();
+  if (_stackWatch) {
+    _stackWatch.disconnect();
+    _stackWatch = null;
+  }
   if (_popover && _popover.parentNode) {
     _popover.parentNode.removeChild(_popover);
   }
@@ -445,6 +464,7 @@ function open(inputEl) {
   requestAnimationFrame(() => {
     if (_popover && _input) position(_popover, _input);
   });
+  _watchToolWindowStack();
   syncUI();
 
   _onOutside = (e) => {

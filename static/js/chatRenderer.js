@@ -3497,16 +3497,19 @@ export function addMessage(role, content, modelName, metadata) {
 
     // Discuss sessions carry the full research report in a seeded system
     // message. Render it through the same thinking block used by model
-    // reasoning, rather than introducing a second collapsible UI.
+    // reasoning, rather than introducing a second collapsible UI. It is a
+    // system primer, not a model reply: use the existing slim system-chip
+    // class (never msg-ai, which would make it an AI bubble and a target for
+    // regenerate/delete pairing) and start collapsed (#6061).
     if (role === 'system' && metadata?.research_spinoff_from) {
       const wrap = document.createElement('div');
-      wrap.className = 'msg msg-ai';
+      wrap.className = 'msg msg-system research-context-msg';
       const roleEl = document.createElement('div');
       roleEl.className = 'role';
       roleEl.textContent = 'Research Context';
       const body = document.createElement('div');
       body.className = 'content';
-      body.innerHTML = markdownModule.createCollapsible(String(textRaw || ''), 'Research Context', true);
+      body.innerHTML = markdownModule.createCollapsible(String(textRaw || ''), 'Research Context', false);
       const hint = document.createElement('div');
       hint.className = 'research-context-continue-hint';
       hint.innerHTML = 'Continue conversation below <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';

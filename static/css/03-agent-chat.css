@@ -1328,6 +1328,11 @@ body.fullwidth-chat .chat-history {
 }
 .msg.msg-system .body { padding: 0; }
 .msg.msg-system pre { margin: 4px 0; white-space: pre-wrap; font-size: 0.85em; }
+/* Deep Research "Discuss" primer (#6061): a collapsed system chip, not an AI bubble. */
+.msg.msg-system.research-context-msg .role { font-size: 0.8em; color: var(--fg-muted, var(--fg)); margin-bottom: 2px; }
+.msg.msg-system.research-context-msg .thinking-section { margin: 4px 0 0; }
+/* It reuses the thinking collapsible but is not model reasoning: keep it when reasoning is hidden. */
+body.hide-thinking .msg.msg-system.research-context-msg .thinking-section { display: block !important; }
 .dropdown-divider {
   height: 1px;
   margin: 3px 6px;
